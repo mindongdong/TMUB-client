@@ -27,7 +27,17 @@
 </template>
 
 <script>
-import { reactive } from 'vue';
+import { onMounted, reactive } from 'vue';
+import { getCategories, updateCategories } from '@/api/index';
+
+// 컴포넌트가 마운트될 때 카테고리 데이터를 불러옴
+onMounted(async () => {
+  try {
+    this.categories.value = await getCategories();
+  } catch (error) {
+    console.error('카테고리 데이터 불러오기 실패:', error);
+  }
+});
 
 export default {
   data() {
@@ -56,6 +66,10 @@ export default {
     };
   },
   methods: {
+    updateCategories() {
+      // 카테고리 데이터를 업데이트
+      updateCategories(this.categorys);
+    },
     calculateWidth() {
       // Calculate the width for each component based on N
       return (100 / 3) + '%';
@@ -102,6 +116,7 @@ export default {
       this.newItem.endTime = '';
       this.newItem.title = '';
       this.newItem.adding = false;
+      updateCategories(this.categorys);
     },
     editItem(category, index) {
       // 선택한 항목의 데이터를 가져와서 수정 준비
@@ -148,7 +163,7 @@ export default {
   /* 배경색 (다크 모드) */
   color: #e0e0e0;
   /* 글자색 (다크 모드) */
-  padding: 2rem;
+  padding: 2rem 4rem;
   box-sizing: border-box;
 }
 
