@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <!-- 각 카테고리에 대해 반복하며 컴포넌트 생성 -->
-    <div v-for="(items, category) in categorys" :key="category" class="component" :style="{ width: calculateWidth() }">
+    <div v-for="(items, category) in categories" :key="category" class="component" :style="{ width: calculateWidth() }">
       <div class="header">
         <h1 class="title">{{ category }}</h1>
         <button class="plus-button" @click="showAddItemForm(category)">+</button>
@@ -9,10 +9,13 @@
       <ul class="content-list">
         <li v-for="(item, index) in items" :key="index" class="list-item">
           <div class="list-item__text">
-            <div class="list-item__date">{{ item.startTime }} ~ {{ item.endTime }}</div>
+            <div class="list-item__date">{{ convertEndTime(item.endTime) }}</div>
             <div class="list-item__title">{{ item.title }}</div>
           </div>
-          <button class="edit-button" @click="editItem(category, index)">수정</button>
+          <div class="buttons">
+            <button class="edit-button" @click="editItem(category, index)">수정</button>
+            <button class="delete-button" @click="removeItem(category, index)">삭제</button>
+          </div>
         </li>
         <li class="list-item" v-if="newItem.adding && newItem.category === category">
           <div class="list-item__text">
@@ -27,35 +30,13 @@
 </template>
 
 <script>
-import { onMounted, reactive } from 'vue';
+import { reactive } from 'vue';
 import { getCategories, updateCategories } from '@/api/index';
-
-// 컴포넌트가 마운트될 때 카테고리 데이터를 불러옴
-onMounted(async () => {
-  try {
-    this.categories.value = await getCategories();
-  } catch (error) {
-    console.error('카테고리 데이터 불러오기 실패:', error);
-  }
-});
 
 export default {
   data() {
     return {
-      categorys: {
-        'Lifestyle': [
-          { startTime: '01.01', endTime: '01.02', title: 'New Year Celebration' },
-          { startTime: '02.14', endTime: '02.14', title: 'Valentine\'s Day' }
-        ],
-        'Work': [
-          { startTime: '01.01', endTime: '01.02', title: 'New Year Celebration' },
-          { startTime: '02.14', endTime: '02.14', title: 'Valentine\'s Day' }
-        ],
-        'Study': [
-          { startTime: '01.01', endTime: '01.02', title: 'New Year Celebration' },
-          { startTime: '02.14', endTime: '02.14', title: 'Valentine\'s Day' }
-        ]
-      },
+      categories: {},
       newItem: reactive({
         category: '',
         endTime: '',
@@ -65,10 +46,17 @@ export default {
       })
     };
   },
+  async mounted() {
+    try {
+      this.categories = await getCategories();
+    } catch (error) {
+      console.error('카테고리 데이터 불러오기 실패:', error);
+    }
+  },
   methods: {
     updateCategories() {
       // 카테고리 데이터를 업데이트
-      updateCategories(this.categorys);
+      updateCategories(this.categories);
     },
     calculateWidth() {
       // Calculate the width for each component based on N
@@ -93,19 +81,31 @@ export default {
             endTime: endDate,
             title: this.newItem.title
           };
-          this.categorys[this.newItem.category].push(newItem);
+          this.categories[this.newItem.category].push(newItem);
           this.resetNewItem();
           return newItem;
         } else {
           alert('시작 날짜가 종료 날짜보다 늦습니다. 다시 입력해주세요.');
           if (this.newItem.editing) {
-            this.categorys[this.newItem.category].push({
+            this.categories[this.newItem.category].push({
               startTime: this.newItem.startTime,
               endTime: this.newItem.endTime,
               title: this.newItem.title
             });
           }
         }
+      } else if (this.newItem.title) {
+        const currentTime = new Date();
+        const startDate = this.convertDate(currentTime);
+        // 날짜 입력 안할 시, 그냥 endTime은 "99.99"로 설정한다. 이는 기한 없음을 의미한다.
+        const newItem = {
+          startTime: startDate,
+          endTime: "99.99",
+          title: this.newItem.title
+        };
+        this.categories[this.newItem.category].push(newItem);
+        this.resetNewItem();
+        return newItem;
       } else {
         alert('모든 필드를 입력해주세요.');
       }
@@ -116,18 +116,23 @@ export default {
       this.newItem.endTime = '';
       this.newItem.title = '';
       this.newItem.adding = false;
-      updateCategories(this.categorys);
+      updateCategories(this.categories);
     },
     editItem(category, index) {
       // 선택한 항목의 데이터를 가져와서 수정 준비
-      const item = this.categorys[category][index];
+      const item = this.categories[category][index];
       console.log(item.endTime);
       this.newItem.endTime = this.convertDate(item.endTime); // 선택한 항목의 종료 시간을 새 항목에 설정
       this.newItem.title = item.title; // 선택한 항목의 제목을 새 항목에 설정
       this.newItem.editing = true; // 수정 모드로 변경
-      this.categorys[category].splice(index, 1); // 기존 항목 삭제
+      this.categories[category].splice(index, 1); // 기존 항목 삭제
       // 수정 폼을 보여주는 함수 실행
       this.showAddItemForm(category);
+    },
+    removeItem(category, index) {
+      // 선택한 항목 삭제
+      this.categories[category].splice(index, 1);
+      this.updateCategories();
     },
     convertDate(input) {
       if (typeof input === 'string') {
@@ -147,6 +152,9 @@ export default {
         throw new Error('입력 형식이 올바르지 않습니다.');
       }
     },
+    convertEndTime(value) {
+      return value === '99.99' ? 'ㅤㅤㅤ' : value;
+    }
   }
 }
 </script>
@@ -163,27 +171,32 @@ export default {
   /* 배경색 (다크 모드) */
   color: #e0e0e0;
   /* 글자색 (다크 모드) */
-  padding: 2rem 4rem;
+  padding: 3rem;
   box-sizing: border-box;
 }
 
 .component {
-  min-width: 440px;
+  min-width: 500px;
   height: 100%;
   /* 각 분할된 컴포넌트의 높이 */
   border: 1px solid #333;
   /* 컴포넌트 테두리 */
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .header {
+  width: 100%;
   height: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #333;
   /* 헤더 하단 테두리 */
-  padding: 0.5rem;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .title {
@@ -194,7 +207,8 @@ export default {
 
 .plus-button,
 .edit-button,
-.complete-button {
+.complete-button,
+.delete-button {
   margin-right: 0;
   /* 버튼 우측 정렬 */
   background-color: #333;
@@ -205,31 +219,53 @@ export default {
   cursor: pointer;
 }
 
+.buttons {
+  display: flex;
+  align-items: center;
+}
+
+.delete-button,
+.edit-button {
+  margin-right: 0.5rem;
+  /* 버튼 간 간격 */
+}
+
+
 .content-list {
-  width: calc(100% - 0.75rem); /* 스크롤바 공간을 고려하여 전체 너비에서 20px 빼기 */
+  width: calc(100% - 1.5rem);
+  /* 스크롤바 공간을 고려하여 전체 너비에서 20px 빼기 */
   list-style-type: none;
   padding: 0;
   margin: 0;
   height: calc(100% - 1.5rem);
-  overflow-y: auto; /* 내용이 넘칠 때 스크롤바 자동 생성 */
-  box-sizing: border-box; /* 패딩과 테두리가 너비에 포함되도록 설정 */
-  scrollbar-width: thin; /* 스크롤바 너비를 얇게 조정 */
-  scrollbar-color: #646464 #202020; /* 스크롤바 색상과 스크롤바 트랙 색상 설정 */
+  overflow-y: auto;
+  /* 내용이 넘칠 때 스크롤바 자동 생성 */
+  box-sizing: border-box;
+  /* 패딩과 테두리가 너비에 포함되도록 설정 */
+  scrollbar-width: thin;
+  /* 스크롤바 너비를 얇게 조정 */
+  scrollbar-color: #646464 #202020;
+  /* 스크롤바 색상과 스크롤바 트랙 색상 설정 */
 }
 
 /* 웹킷 기반 브라우저용 스크롤바 스타일 */
 .content-list::-webkit-scrollbar {
-  width: 8px; /* 스크롤바의 너비 */
+  width: 8px;
+  /* 스크롤바의 너비 */
 }
 
 .content-list::-webkit-scrollbar-track {
-  background: #202020; /* 스크롤바 트랙의 배경 색상 */
+  background: #202020;
+  /* 스크롤바 트랙의 배경 색상 */
 }
 
 .content-list::-webkit-scrollbar-thumb {
-  background-color: #646464; /* 스크롤바 썸(핸들)의 색상 */
-  border-radius: 4px; /* 스크롤바 썸의 모서리 둥글게 */
-  border: 2px solid #202020; /* 스크롤바 썸과 트랙 간의 경계선 */
+  background-color: #646464;
+  /* 스크롤바 썸(핸들)의 색상 */
+  border-radius: 4px;
+  /* 스크롤바 썸의 모서리 둥글게 */
+  border: 2px solid #202020;
+  /* 스크롤바 썸과 트랙 간의 경계선 */
 }
 
 .list-item {
