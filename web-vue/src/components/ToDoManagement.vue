@@ -1,7 +1,8 @@
 <template>
   <div class="container">
+    <div class="block-view-container" v-if="!isViewComponent">아직 개발 중 입니다...</div>
     <!-- 각 카테고리에 대해 반복하며 컴포넌트 생성 -->
-    <div v-for="(items, category) in categories" :key="category" class="component" :style="{ width: calculateWidth() }">
+    <div v-else v-for="(items, category) in categories" :key="category" class="component" :style="{ width: calculateWidth() }">
       <div class="header">
         <h1 class="title">{{ category }}</h1>
         <button class="plus-button" @click="showAddItemForm(category)">+</button>
@@ -37,6 +38,7 @@ export default {
   data() {
     return {
       categories: {},
+      isViewComponent: true,
       newItem: reactive({
         category: '',
         endTime: '',
@@ -49,7 +51,9 @@ export default {
   async mounted() {
     try {
       this.categories = await getCategories();
+      this.isViewComponent = false;
     } catch (error) {
+      this.isViewComponent = false;
       console.error('카테고리 데이터 불러오기 실패:', error);
     }
   },
@@ -173,6 +177,16 @@ export default {
   /* 글자색 (다크 모드) */
   padding: 3rem;
   box-sizing: border-box;
+}
+
+.block-view-container{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  color: white;
 }
 
 .component {

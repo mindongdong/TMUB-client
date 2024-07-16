@@ -1,8 +1,8 @@
 <template>
     <div class="layout">
-      <div class="top-component-container">
+      <!-- <div class="top-component-container">
         <ToDoManagement />
-      </div>
+      </div> -->
       <div class="bottom-component-container">
         <BlockManagement />
       </div>
@@ -10,13 +10,13 @@
 </template>
 
 <script>
-import ToDoManagement from '@/components/ToDoManagement.vue'
+// import ToDoManagement from '@/components/ToDoManagement.vue'
 import BlockManagement from '@/components/BlockManagement.vue'
 
 export default {
     name: 'MainPage',
     components: {
-        ToDoManagement,
+        // ToDoManagement,
         BlockManagement,
     }
 }
@@ -33,6 +33,6 @@ export default {
 }
 .bottom-component-container{
   width: 100%;
-  height: 70%;
+  height: 100%;
 }
 </style>
