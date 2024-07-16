@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // API 서버의 기본 URL 설정
-const API_BASE_URL = process.env.API_URL || "http://localhost:3334";
+const API_BASE_URL = process.env.API_URL || "/tmub/api";
 
 // 카테고리 데이터를 불러오는 함수
 export const getCategories = async () => {
